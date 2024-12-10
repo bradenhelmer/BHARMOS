@@ -69,8 +69,28 @@
 
 **Note:** `X30/W30` is used as the link register for procedure calls.
 
-### SIMD / FP Registers
-- `Bn` (8 bits), `Hn` (16 bits), `Sn` (32 bits), `Dn` (64 bits), `Qn` (128 bits) are sub-register names for the SIMD/FP register file (0–31).
+### SIMD & Floating-Point Scalar Registers
+| Register Name | Size    | Description                                                                 |
+|---------------|---------|-----------------------------------------------------------------------------|
+| Bn            | 8 bits  | Byte-sized sub-register of SIMD/FP register (0–31).                        |
+| Hn            | 16 bits | Halfword-sized sub-register of SIMD/FP register (0–31).                    |
+| Sn            | 32 bits | Word-sized sub-register of SIMD/FP register (0–31).                       |
+| Dn            | 64 bits | Doubleword-sized sub-register of SIMD/FP register (0–31).                 |
+| Qn            | 128 bits| Full SIMD/FP register (0–31), used for 128-bit vector operations.          |
+| Vn            | Variable| General-purpose SIMD/FP register (0–31), supports scalar and vector views. |
+
+#### Examples of using the `V` register as a vector
+| Syntax      | Description                                        |
+|-------------|----------------------------------------------------|
+| `Vn.16B`    | Access the vector as 16 bytes (8 bits each).       |
+| `Vn.8H`     | Access the vector as 8 halfwords (16 bits each).   |
+| `Vn.4S`     | Access the vector as 4 single-precision words (32 bits each). |
+| `Vn.2D`     | Access the vector as 2 double-precision words (64 bits each). |
+| `Vn.8B`     | Access the lower half of the vector as 8 bytes.    |
+| `Vn.4H`     | Access the lower half of the vector as 4 halfwords.|
+| `Vn.2S`     | Access the lower half of the vector as 2 single-precision words. |
+| `Vn.D`      | Access the lower half of the vector as 1 double-precision word. |
+
 
 ### Condition Codes
 - Refer to Section C1.2.4 in the manual for details on condition flags and their usage.
@@ -114,3 +134,103 @@
    ```asm
    LDR X0, =value ; Load address of 'value' into X0
    ```
+
+## System Level Programming Information (See Part D of Manual)
+
+### Exception Levels
+ - 4 levels from EL0 to EL3:
+
+| Level | Supports                 | Use Case       |
+|-------|--------------------------|----------------|
+| EL0   | _Unprivileged_ execution | Applications   |
+| EL1   | _Privileged_ execution   | OS Kernel      |
+| EL2   | Virtualization           | Hypervisor     |
+| EL3   | Security State           | Secure Monitor |
+
+- All implementations **must** include EL0 and EL1.
+#### Moving between exception levels
+- On taking an exception, the EL may only increase or remain the same.
+- On returning from an exception, the EL may only decrease or remain the same.
+- The inteneded EL the execution remains or changes to is called the _target exception level_.
+    - No exception can target EL0.
+    - The target is implicit by nature or defined by configuration bits in sys regs.
+#### Precise Exceptions
+- Exceptions are described as precise when the handler receieves PE state and memory system
+  state that is consistent with the PE having executed all instructions up to but not including
+  the point at which the exception was taken.
+- All exceptions in AArch64 are required to be precise except _SError Interrupt_.
+#### Synchronous & Asynchronous Exceptions
+##### Synchronous Exceptions:
+- Exception is generated from direct/attempted execution of an instruction.
+- Return address given to handler is guaranteed to indicate the instruction that
+  caused the exception.
+- It is precise.
+##### Asynchronous Exceptions:
+- Opposite of all criteria in synchronous exceptions.
+
+### Execution State
+- AArch64 or AArch32
+- Exception levels operate in execution states.
+- PE can only change execution state at reset or on change of exception level.
+
+### Registers for Instruction Processing and Exception Handling
+
+#### [General Purpose Registers](1#general-purpose-registers-(gprs))
+
+#### Stack Pointer
+- Each exception level has its own dedicated stack pointer register:
+    - `SP_EL0` | `SP_EL1` | `SP_EL2` | `SP_EL3`
+#### [SIMD & Floating-Point Registers](1#simd-%26-floating-point-scalar-registers)
+
+#### Saved Program Status Regsiters (SPSRs)
+- Used to save PE state when taking exceptions, one register per level:
+    - `SPSR_EL0` | `SPSR_EL1` | `SPSR_EL2` | `SPSR_EL3`
+- When an exception is taken, the PE state is saved from PSTATE in the SPSR at the EL
+  the exception is taken to. This means:
+    - On return, restore the PE state to the state stored in the SPSR at the level
+      the exception is returning from.
+- All SPSRs are unknown on reset.
+
+#### Exception Link Registers (ELRs)
+- Hold preferred exception return addresses, on register per level:
+    - `ELR_EL0` | `ELR_EL1` | `ELR_EL2` | `ELR_EL3`
+- When a PE takes an exception, the preferred return address is saved in the ELR at
+  the exeption level the exception is taken to.
+- On exception return, the program counter is restored to the address stored in the
+  ELR.
+
+### Process State - PSTATE
+- Abstraction of process information.
+
+#### PSTATE Fields
+
+| **Field**       | **Description**                                                                                       | **Reset Value**                  |
+|------------------|-------------------------------------------------------------------------------------------------------|-----------------------------------|
+| **Condition Flags**                                                                                                      |                                   |
+| `N`             | Negative Condition flag.                                                                              |                                   |
+| `Z`             | Zero Condition flag.                                                                                  |                                   |
+| `C`             | Carry Condition flag.                                                                                 |                                   |
+| `V`             | Overflow Condition flag.                                                                              |                                   |
+| **Execution State Controls**                                                                                            |                                   |
+| `SS`            | Software Step bit. Set to `0` on reset or exception to AArch64.                                       | `0`                               |
+| `IL`            | Illegal Execution state bit. Set to `0` on reset or exception to AArch64.                             | `0`                               |
+| `nRW`           | Current Execution state. `0` for AArch64. Set to `0` on reset or exception to AArch64.                | `0`                               |
+| `EL`            | Current Exception level. Encodes the highest implemented Exception level on reset to AArch64.         | Highest Exception Level           |
+| `SP`            | Stack pointer register selection. Set to `1` (selects `SP_ELx`) on reset or exception to AArch64.     | `1`                               |
+| **Exception Mask Bits**                                                                                                  |                                   |
+| `D`             | Debug exception mask bit. Set to `1` on reset or exception to AArch64.                                | `1`                               |
+| `A`             | SError interrupt mask bit.                                                                            | `1`                               |
+| `I`             | IRQ interrupt mask bit.                                                                               | `1`                               |
+| `F`             | FIQ interrupt mask bit.                                                                               | `1`                               |
+| **Access Control Bits**                                                                                                  |                                   |
+| `PAN`           | Privileged Access Never bit. Requires `FEAT_PAN` to be implemented.                                   |                                   |
+| `UAO`           | User Access Override bit. Requires `FEAT_UAO` to be implemented.                                      |                                   |
+| `TCO`           | Tag Check Override bit. Requires `FEAT_MTE` to be implemented.                                        |                                   |
+| **Branch Control Bits**                                                                                                  |                                   |
+| `BTYPE`         | Branch target identification bit. Requires `FEAT_BTI` to be implemented.                              |                                   |
+| **Timing Control Bits**                                                                                                  |                                   |
+| `DIT`           | Data Independent Timing bit. Requires `FEAT_DIT` to be implemented. Set to `0` on reset to AArch64.   | `0`                               |
+| **Speculation Control Bits**                                                                                            |                                   |
+| `SSBS`          | Speculative Store Bypass Safe bit. Requires `FEAT_SSBS` to be implemented.                            | IMPLEMENTATION DEFINED value      |
+
+#### Accessing PSTATE Fields
