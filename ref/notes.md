@@ -1,6 +1,36 @@
 # Architecture Notes: Armv8-A  
 **CPU:** Cortex-A72
 
+## Table of Contents
+- [General Notes](1#1.-general-notes-(see-part-a-of-the-manual))
+    - [Execution State](1#execution-state%3A-aarch64)
+    - [System Registers](1#system-registers)
+    - [Data Types](1#data-types)
+    - [Memory Model](1#memory-model)
+- [Instruction Set](1#2.-instruction-set-(see-part-c-of-the-manual))
+    - [General-Purpose Regsiters](1#general-purpose-registers-(gprs))
+    - [SIMD & Floating-Point Scalar Registers](1#simd-%26-floating-point-scalar-registers)
+      - [`V` Register Use Examples](1#examples-of-using-the-v-register-as-a-vector)
+    - [Condition Codes](1#condition-codes)
+    - [Addressing Modes](1#addressing-modes)
+- [System Level Programming Information](1#system-level-programming-information-(see-part-d-of-manual))
+  - [Exception Levels](1#exception-levels)
+    - [Moving Between Exception Levels](1#moving-between-exception-levels)
+    - [Precise Exceptions](1#precise-exceptions)
+    - [Synchronous & Asynchronous Exceptions](1#synchronous-%26-asynchronous-exceptions)
+      - [Synchronous Exceptions](1#synchronous-exceptions%3A)
+      - [Asynchronous Exceptions](1#asynchronous-exceptions%3A)
+  - [Excecution State](1#execution-state)
+  - [Registers for Instruction Processing and Exception Handling](1#registers-for-instruction-processing-and-exception-handling)
+    - [General Purpose Registers](1#general-purpose-registers)
+    - [SIMD & Floating-Point Regsiers](1#simd-%26-floating-point-registers)
+    - [Stack Pointer](1#stack-pointer)
+    - [Saved Program Status Registers (SPSRs)](1#saved-program-status-regsiters-(spsrs))
+    - [Exception Link Regsiters](1#exception-link-registers-(elrs))
+  - [Process State (PSTATE)](1#process-state---pstate)
+  - [Reset](1#reset)
+    - [AArch64 Reset PE State](1#pe-state-on-reset-to-aarch64-state-(see-d1.9.1-in-manual))
+
 ## 1. General Notes (See Part A of the Manual)
 
 ### Execution State: AArch64
@@ -100,7 +130,7 @@
 1. **Base Register Only (No Offset)**: `[base{, #0}]`
    ```asm
    LDR X0, [X1] ; Load from address in X1 into X0
-   ```
+```
 
 2. **Base + Offset**
    - **Immediate Offset:** `[base, #imm]`
@@ -180,6 +210,9 @@
 #### Stack Pointer
 - Each exception level has its own dedicated stack pointer register:
     - `SP_EL0` | `SP_EL1` | `SP_EL2` | `SP_EL3`
+    - These registers may have the 't' or 'h' suffix from the 'thread' or 'handler' terminology
+        - 't' Indicates the use of the `SP_EL0` stack pointer.
+        - 'h' Indicates the use of the `SP_ELx` stack pointer.
 #### [SIMD & Floating-Point Registers](1#simd-%26-floating-point-scalar-registers)
 
 #### Saved Program Status Regsiters (SPSRs)
@@ -199,38 +232,18 @@
 - On exception return, the program counter is restored to the address stored in the
   ELR.
 
-### Process State - PSTATE
-- Abstraction of process information.
+### [Process State - PSTATE](./pstate.md)
 
-#### PSTATE Fields
+### Reset
+- **Cold Reset**: Resets all logic on which PE executes.
+- **Warm Reset**: Resets _some_ logic on which PE executes. Some state is left unchanged.
+- On a reset, the PE enters the **highest** implemented exception level.
+- AArch64:
+    - The stack pointer for the highest implemented exception level is selected.
+    - Execution starts at a **IMPLEMENTATION DEFINED** address. **ANYWHERE** in the
+      physical address range.
+    - The reset vector base address register (`RVBAR_ELx`) in the highest implemented
+      exception level holds this address.:
+        - `RVBAR_EL1` | `RVBAR_EL2` | `RVBAR_EL3`
 
-| **Field**       | **Description**                                                                                       | **Reset Value**                  |
-|------------------|-------------------------------------------------------------------------------------------------------|-----------------------------------|
-| **Condition Flags**                                                                                                      |                                   |
-| `N`             | Negative Condition flag.                                                                              |                                   |
-| `Z`             | Zero Condition flag.                                                                                  |                                   |
-| `C`             | Carry Condition flag.                                                                                 |                                   |
-| `V`             | Overflow Condition flag.                                                                              |                                   |
-| **Execution State Controls**                                                                                            |                                   |
-| `SS`            | Software Step bit. Set to `0` on reset or exception to AArch64.                                       | `0`                               |
-| `IL`            | Illegal Execution state bit. Set to `0` on reset or exception to AArch64.                             | `0`                               |
-| `nRW`           | Current Execution state. `0` for AArch64. Set to `0` on reset or exception to AArch64.                | `0`                               |
-| `EL`            | Current Exception level. Encodes the highest implemented Exception level on reset to AArch64.         | Highest Exception Level           |
-| `SP`            | Stack pointer register selection. Set to `1` (selects `SP_ELx`) on reset or exception to AArch64.     | `1`                               |
-| **Exception Mask Bits**                                                                                                  |                                   |
-| `D`             | Debug exception mask bit. Set to `1` on reset or exception to AArch64.                                | `1`                               |
-| `A`             | SError interrupt mask bit.                                                                            | `1`                               |
-| `I`             | IRQ interrupt mask bit.                                                                               | `1`                               |
-| `F`             | FIQ interrupt mask bit.                                                                               | `1`                               |
-| **Access Control Bits**                                                                                                  |                                   |
-| `PAN`           | Privileged Access Never bit. Requires `FEAT_PAN` to be implemented.                                   |                                   |
-| `UAO`           | User Access Override bit. Requires `FEAT_UAO` to be implemented.                                      |                                   |
-| `TCO`           | Tag Check Override bit. Requires `FEAT_MTE` to be implemented.                                        |                                   |
-| **Branch Control Bits**                                                                                                  |                                   |
-| `BTYPE`         | Branch target identification bit. Requires `FEAT_BTI` to be implemented.                              |                                   |
-| **Timing Control Bits**                                                                                                  |                                   |
-| `DIT`           | Data Independent Timing bit. Requires `FEAT_DIT` to be implemented. Set to `0` on reset to AArch64.   | `0`                               |
-| **Speculation Control Bits**                                                                                            |                                   |
-| `SSBS`          | Speculative Store Bypass Safe bit. Requires `FEAT_SSBS` to be implemented.                            | IMPLEMENTATION DEFINED value      |
-
-#### Accessing PSTATE Fields
+#### PE State on reset to AArch64 state (SEE D1.9.1 in manual)
