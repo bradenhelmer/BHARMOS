@@ -4,7 +4,7 @@
 
 ## PSTATE Fields:
 
-| **Field**       | **Description**                                                                                       | **Reset Value**                  |
+| **Field**       | **Description**                                                                                       | **Reset Value**                   |
 |-----------------|-------------------------------------------------------------------------------------------------------|-----------------------------------|
 | **Condition Flags**                                                                                                     |                                   |
 | `N`             | Negative Condition flag.                                                                              |                                   |

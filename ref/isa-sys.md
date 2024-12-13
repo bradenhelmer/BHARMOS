@@ -1,5 +1,7 @@
-# Architecture Notes: Armv8-A  
+# ArmV8-A Architecture Notes - ISA & System Level Programming
 **CPU:** Cortex-A72
+
+[**Reference Manual**](https://developer.arm.com/documentation/ddi0487/fc/)
 
 ## Table of Contents
 - [General Notes](1#1.-general-notes-(see-part-a-of-the-manual))
@@ -30,6 +32,15 @@
   - [Process State (PSTATE)](1#process-state---pstate)
   - [Reset](1#reset)
     - [AArch64 Reset PE State](1#pe-state-on-reset-to-aarch64-state-(see-d1.9.1-in-manual))
+  - [Exception Entry](1#exception-entry)
+    - [Preferred Exception Return Address](1#preferred-exception-return-address)
+    - [Exception Vectors](1#exception-vectors)
+    - [Exception Classes and `ESR_ELx` Registers](1#exception-classes-and-esr_elx-registers)
+  - [Exception Return](1#exception-return)
+  - [Synchronous Exception Types](1#synchronous-exception-types)
+    - [Floating-Point Exceptions](1#floating-point-exceptions)
+  - [Asynchronous Exception Types (Interrupts)](1#asynchronous-exception-types-(interrupts))
+  - [System Calls](1#system-calls)
 
 ## 1. General Notes (See Part A of the Manual)
 
@@ -88,38 +99,38 @@
   - SIMD/FP operations
 
 ### General-Purpose Registers (GPRs)
-| Name | Size     | Encoding | Description                             |
-|------|-----------|----------|-----------------------------------------|
-| Wn   | 32 bits   | 0–30     | General-purpose register W0–W30         |
-| Xn   | 64 bits   | 0–30     | General-purpose register X0–X30         |
-| WZR  | 32 bits   | 31       | Zero register (write ignored, read 0)  |
-| XZR  | 64 bits   | 31       | Zero register (write ignored, read 0)  |
-| WSP  | 32 bits   | 31       | Current stack pointer (32-bit view)     |
-| SP   | 64 bits   | 31       | Current stack pointer (64-bit view)     |
+| Name | Size      | Encoding | Description                           |
+|------|-----------|----------|---------------------------------------|
+| Wn   | 32 bits   | 0–30     | General-purpose register W0–W30       |
+| Xn   | 64 bits   | 0–30     | General-purpose register X0–X30       |
+| WZR  | 32 bits   | 31       | Zero register (write ignored, read 0) |
+| XZR  | 64 bits   | 31       | Zero register (write ignored, read 0) |
+| WSP  | 32 bits   | 31       | Current stack pointer (32-bit view)   |
+| SP   | 64 bits   | 31       | Current stack pointer (64-bit view)   |
 
 **Note:** `X30/W30` is used as the link register for procedure calls.
 
 ### SIMD & Floating-Point Scalar Registers
 | Register Name | Size    | Description                                                                 |
 |---------------|---------|-----------------------------------------------------------------------------|
-| Bn            | 8 bits  | Byte-sized sub-register of SIMD/FP register (0–31).                        |
-| Hn            | 16 bits | Halfword-sized sub-register of SIMD/FP register (0–31).                    |
-| Sn            | 32 bits | Word-sized sub-register of SIMD/FP register (0–31).                       |
-| Dn            | 64 bits | Doubleword-sized sub-register of SIMD/FP register (0–31).                 |
-| Qn            | 128 bits| Full SIMD/FP register (0–31), used for 128-bit vector operations.          |
-| Vn            | Variable| General-purpose SIMD/FP register (0–31), supports scalar and vector views. |
+| Bn            | 8 bits  | Byte-sized sub-register of SIMD/FP register (0–31).                         |
+| Hn            | 16 bits | Halfword-sized sub-register of SIMD/FP register (0–31).                     |
+| Sn            | 32 bits | Word-sized sub-register of SIMD/FP register (0–31).                         |
+| Dn            | 64 bits | Doubleword-sized sub-register of SIMD/FP register (0–31).                   |
+| Qn            | 128 bits| Full SIMD/FP register (0–31), used for 128-bit vector operations.           |
+| Vn            | Variable| General-purpose SIMD/FP register (0–31), supports scalar and vector views.  |
 
 #### Examples of using the `V` register as a vector
-| Syntax      | Description                                        |
-|-------------|----------------------------------------------------|
-| `Vn.16B`    | Access the vector as 16 bytes (8 bits each).       |
-| `Vn.8H`     | Access the vector as 8 halfwords (16 bits each).   |
-| `Vn.4S`     | Access the vector as 4 single-precision words (32 bits each). |
-| `Vn.2D`     | Access the vector as 2 double-precision words (64 bits each). |
-| `Vn.8B`     | Access the lower half of the vector as 8 bytes.    |
-| `Vn.4H`     | Access the lower half of the vector as 4 halfwords.|
+| Syntax      | Description                                                      |
+|-------------|------------------------------------------------------------------|
+| `Vn.16B`    | Access the vector as 16 bytes (8 bits each).                     |
+| `Vn.8H`     | Access the vector as 8 halfwords (16 bits each).                 |
+| `Vn.4S`     | Access the vector as 4 single-precision words (32 bits each).    |
+| `Vn.2D`     | Access the vector as 2 double-precision words (64 bits each).    |
+| `Vn.8B`     | Access the lower half of the vector as 8 bytes.                  |
+| `Vn.4H`     | Access the lower half of the vector as 4 halfwords.              |
 | `Vn.2S`     | Access the lower half of the vector as 2 single-precision words. |
-| `Vn.D`      | Access the lower half of the vector as 1 double-precision word. |
+| `Vn.D`      | Access the lower half of the vector as 1 double-precision word.  |
 
 
 ### Condition Codes
@@ -130,7 +141,7 @@
 1. **Base Register Only (No Offset)**: `[base{, #0}]`
    ```asm
    LDR X0, [X1] ; Load from address in X1 into X0
-```
+   ```
 
 2. **Base + Offset**
    - **Immediate Offset:** `[base, #imm]`
@@ -246,4 +257,92 @@
       exception level holds this address.:
         - `RVBAR_EL1` | `RVBAR_EL2` | `RVBAR_EL3`
 
-#### PE State on reset to AArch64 state (SEE D1.9.1 in manual)
+#### PE State on reset to AArch64 state (See D1.9.1 in manual)
+
+### Exception Entry
+- Exceptions will **never** cause execution to move to a lower exception level.
+- PE State is saved in `SPSR_ELx` at target exception level.
+- Preferred return address is saved in `ELR_ELx` at target exception level.
+- Selected SP register is the dedicated `SP_ELx` register at the target exception level.
+- Execution moves to the target exception level, starting at the address defined by the exception vector.
+  - This vector is used to indicate whether the exception came from a lower level or the current level.
+
+#### Preferred Exception Return Address
+- **Asynchronous exceptions**: The address is the first instruction that was not executed or completed due to the interrupt.  
+- **Synchronous exceptions (non-system calls)**: The address is the instruction causing the exception.  
+- **Exception-generating instructions**: The address is the instruction immediately following the one causing the exception.
+
+#### Exception Vectors
+- On PE exception, execution is forced to the address that is the _exception vector_ for the given exception.
+  - This exception vector lives in the _vector table_:
+    - The table occupies word-aligned (32-bit) memory addresses, starting at the _vector table base address_ (VBAR).
+    - Each exception level has its own VBAR.
+    - The table indicates if the exception is one of the following:
+      - Synchronous exception
+      - SError
+      - IRQ
+      - FRQ
+    - The vector table offsets can be found at table **D1-5** in the manual.
+
+#### Exception Classes and `ESR_ELx` Registers
+- `ESR_ELx` registers hold information about the reasoning for the exception if the exception is
+  either a synchronous exception or an SError interrupt.
+- The 32-bit ESR_ELx registers are formatted as follows:
+
+| Bit Field | Bit Range | Description                                                                   |
+|-----------|-----------|-------------------------------------------------------------------------------|
+| `EC`      | `[31:26]` | Cause of exception                                                            |
+| `IL`      | `[25]`    | Indicates 16 or 32-bit instruction length                                     |
+| `ISS`     | `[24:0]`  | Instruction specific syndrome field, can be independently defiend for each EC |
+
+- Each exception class and code can be found in table **D1-6** in the manual.
+
+### Exception Return
+- An exception return will **always** be to the same or lower exception level.
+- Returns are used for:
+  - Returning to a previously executing thread.
+  - Entry to a new execution thhread.
+- Requires the simultaneous restoration of the PC & PSTATE to values consistent with the desired
+  state of execution returning from the exception. The processor coordinates this synchronization.
+  - The PC is restored from `ELR_ELx`.
+  - PSTATE is restored from `SPSR_ELx`
+- Sets event register for PE executing the exception return instruction.
+- The exception return instruction is undefined in `EL0`. 
+- For illegal and legal return events, see section **D1.11.2** & **D1.11.3** in the manual.
+
+### Synchronous Exception Types
+- Any exception generated in the attempt to execute an UNDEFINED instruction:
+  - Instructions at an inappropriate exception level.
+  - Disabled instructions.
+  - Instruction bit patterns that have not been allocated.
+- Illegal execution state exceptions (`PSTATE.IL == 1`).
+- Use of misaligned SP.
+- Attempted to execute instruction with misaligned PC.
+- Exception generating instructions `SVC`, `HVC`, or `SMC`.
+- Traps on attempts to execute instructions that are trapped to higher exception levels
+  according to system registers.
+- Instruction aborts from attempted instruction execution from memory areas that generated faults
+- Data aborts from attemped reads or writes of memory that generate faults.
+- All debug exceptions.
+- For instructions that generate multiple synchronous exceptions, the priority numbering hierarchy
+  can be found in section **D1.12.4** of the manual
+
+#### Floating-Point Exceptions
+- Input Denormal.
+- Inexact.
+- Underflow.
+- Overflow.
+- Divide by zero.
+- Invalid Operation.
+
+### Asynchronous Exception Types (Interrupts)
+- Two types of interrupts:
+  - **Physical Interrupts** - Signals sent to the PE from the outside:
+    - SError (System Error)
+    - IRQ (Interrupt Request)
+    - FRQ (Fast Interrupt Request)
+  - **Virtual interrupts** - Only at EL2
+
+### System Calls
+- Generated by execution of instructions `SVC`, `HVC`, or `SMC`.
+  - `SVC` generates a supervisor call by default that targets EL1.
