@@ -1,5 +1,4 @@
 #include "kernel.h"
-
 volatile u8 *uart = (u8 *)0x09000000;
 
 void putchar(char c) {

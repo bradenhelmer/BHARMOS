@@ -1,3 +1,5 @@
 ref/*.pdf
 *.o
 *.elf
+build
+compile_commands.json

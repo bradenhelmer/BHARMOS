@@ -1,4 +1,7 @@
+/* BHARMOS Linker Script*/
+
 ENTRY(_start)
+
 SECTIONS {
 	. = 0x40100000;
 	.startup . : { boot.o(.text) }
