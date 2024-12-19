@@ -71,3 +71,12 @@ add_custom_target(debug
 	debug-script
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
+
+add_custom_target(dump
+    COMMAND
+	llvm-objdump -D $<TARGET_FILE:bharmos.elf>
+	> be.dump && nvim be.dump
+	DEPENDS
+	bharmos.elf
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)

@@ -117,8 +117,10 @@ _start:
 	/* Setup vector table */
 	bl init_vector_table
 
+	mov x2, #10
 	bl kmain
 	b .
 	
 high_exception_halt:
+	wfi
 	b high_exception_halt

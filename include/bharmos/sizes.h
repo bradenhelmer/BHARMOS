@@ -1,7 +1,8 @@
 // kernel.h
 // ~~~~~~~~
 // Common kernel definitions.
-
+#ifndef BHARMOS_SIZES_H
+#define BHARMOS_SIZES_H
 // clang-format off
 // Integer Typedefs
 typedef unsigned char  u8;
@@ -17,3 +18,5 @@ typedef signed   long  s64;
 typedef float       f32;
 typedef double      f64;
 typedef long double f128;
+
+#endif // BHARMOS_SIZES_H

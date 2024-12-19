@@ -10,6 +10,13 @@
 #define BHARMOS_REGISTERS_H
 #include <bharmos/sizes.h>
 
+// CurrentEL - Current Exception Level
+typedef struct {
+  u64 RES1 : 2;    // Reserved.
+  u64 EL : 2;      // Current exception level.
+  u64 RES0 : 60;   // Reserved. 
+} CurrentEL;
+
 // ESR_EL1 - Exception Syndrome Register
 typedef struct {
   u64 ISS : 25;    // Instruction specific syndrome.
@@ -122,4 +129,11 @@ typedef struct {
 } VBAR_EL1;
 
 // clang-format on
+
+#define READ_SYS_REG(REG_TYPE, OUTPUT)                                         \
+  __asm__ __volatile__("mrs %0, " #REG_TYPE : "=r"(OUTPUT) :);
+
+#define WRITE_SYS_REG(REG_TYPE, INPUT)                                         \
+  __asm__ __volatile__("msr " #REG_TYPE ", %0" ::"r"(INPUT));
+
 #endif // BHARMOS_REGISTERS_H

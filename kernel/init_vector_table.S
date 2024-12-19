@@ -4,6 +4,7 @@
 	* Exception vector table and initialization code.
 */
 
+.section ".boot.text", "ax"
 .global init_vector_table
 init_vector_table:
 	ldr x1, =el1_vector_table

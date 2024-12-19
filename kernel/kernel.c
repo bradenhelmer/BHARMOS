@@ -3,6 +3,7 @@
  *
  * Main kernel entry point.
  */
+#include <bharmos/exceptions.h>
 #include <bharmos/sizes.h>
 volatile u8 *uart = (u8 *)0x09000000;
 
@@ -15,4 +16,10 @@ void print(const char *s) {
   }
 }
 
-void kmain(void) { print("BHARMOS Kernel\n"); }
+void kmain(void) {
+  print("Starting BHARMOS Kernel...\n");
+  u8 EL = get_current_el();
+  print("The current exception level is: ");
+  putchar(EL + 48);
+  putchar('\n');
+}
