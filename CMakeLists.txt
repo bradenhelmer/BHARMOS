@@ -13,6 +13,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Cross Compilation Flags
 add_compile_options(
+	-g
     --target=aarch64-none-elf
     -mcpu=cortex-a72
     -nostdlib
@@ -22,24 +23,25 @@ add_compile_options(
 # Gather all source files
 file(GLOB C_SOURCES "${KERNEL_DIR}/*.c")
 file(GLOB ASM_SOURCES "${KERNEL_DIR}/*.S")
+set(LINKER_SCRIPT "${KERNEL_DIR}/bharmos-link.ld")
 
 # Create the ELF target
 add_executable(bharmos.elf ${C_SOURCES} ${ASM_SOURCES})
 target_include_directories(bharmos.elf PRIVATE ${INCLUDE_DIR})
-
+#
 # Linker flags
 target_link_options(bharmos.elf PRIVATE
     --target=aarch64-none-elf
     -fuse-ld=lld
     -nostdlib
-    -T${KERNEL_DIR}/bharmos-link.ld
+	-T${LINKER_SCRIPT}
 )
 
 # Running with QEMU
 set(QEMU_AARCH64 qemu-system-aarch64)
-set(QEMU_MACHINE "virt")
 set(QEMU_CPU "cortex-a72")
 set(QEMU_FLAGS "-nographic")
+set(QEMU_MACHINE "virt")
 
 add_custom_target(run
     COMMAND ${QEMU_AARCH64}
@@ -50,4 +52,22 @@ add_custom_target(run
     DEPENDS bharmos.elf
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Running bharmos.elf in QEMU"
+)
+
+add_custom_target(debug-script
+	COMMAND ${CMAKE_COMMAND}
+			-E copy
+			${CMAKE_SOURCE_DIR}/scripts/debug.sh
+			${CMAKE_BINARY_DIR}
+	DEPENDS
+	${CMAKE_SOURCE_DIR}/scripts/debug.sh
+)
+
+add_custom_target(debug
+	COMMAND 
+	${CMAKE_BINARY_DIR}/debug.sh
+    DEPENDS
+	bharmos.elf
+	debug-script
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
