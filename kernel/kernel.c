@@ -1,17 +1,18 @@
-#include "kernel.h"
+/*
+ * kernel.c
+ *
+ * Main kernel entry point.
+ */
+#include <bharmos/sizes.h>
 volatile u8 *uart = (u8 *)0x09000000;
 
-void putchar(char c) {
-  *uart = c;
-}
+void putchar(char c) { *uart = c; }
 
 void print(const char *s) {
   while (*s != '\0') {
-	putchar(*s);
-	s++;
+    putchar(*s);
+    s++;
   }
 }
 
-void kmain(void) {
-  print("BHARMOS Kernel\n");
-}
+void kmain(void) { print("BHARMOS Kernel\n"); }

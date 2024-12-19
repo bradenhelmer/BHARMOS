@@ -1,4 +1,8 @@
-/* EL1 Exception Vector Initialization Code */
+/* 
+	* init_vector_table.S
+	*
+	* Exception vector table and initialization code.
+*/
 
 .global init_vector_table
 init_vector_table:
@@ -6,6 +10,7 @@ init_vector_table:
 	msr VBAR_EL1, x1
 	ret
 
+.global el1_vector_table
 .balign 0x800
 el1_vector_table:
 
