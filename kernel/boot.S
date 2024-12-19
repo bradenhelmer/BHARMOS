@@ -74,11 +74,6 @@
 	fmov d30, xzr
 	fmov d31, xzr
 
-	/* Only continue with core 0 */
-	mrs x2, MPIDR_EL1
-	and x2, x2, #0xFF
-	cbnz x2, core_sleep
-
 	/* Init Stack Pointer Registers */
 	adr x1, stack_top
 	mov sp, x1
@@ -92,6 +87,11 @@ core_sleep:
 
 .global _start
 _start:
+
+	/* Only continue with core 0 */
+	mrs x2, MPIDR_EL1
+	and x2, x2, #0xFF
+	cbnz x2, core_sleep
 
 	init_registers
 
