@@ -68,7 +68,7 @@
 	ldp q0, q1, [sp],   #FP_RESTORE_PAIR_OFFSET	
 
 	/* Restore GP Registers */
-	ldr x30, [sp], #8
+	ldr x30, xzr, [sp], #GP_RESTORE_PAIR_OFFSET
 	ldp x28, x29, [sp], #GP_RESTORE_PAIR_OFFSET
 	ldp x26, x27, [sp], #GP_RESTORE_PAIR_OFFSET
 	ldp x24, x25, [sp], #GP_RESTORE_PAIR_OFFSET
