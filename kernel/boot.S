@@ -1,6 +1,13 @@
+/* 
+	* boot.S
+	*
+	* CPU startup and initialization code.
+*/
+
 .section ".boot.text","ax"
 
 .macro init_registers
+
 	/* Init GP registers */
 	mov x0, xzr
 	mov x1, xzr
@@ -34,7 +41,7 @@
 	mov x29, xzr
 	mov x30, xzr
 	
-	/* Init FP Registers */
+	/* Init FP registers */
 
 	/* Disable access trapping for EL1/EL0 */
 	mov x1, #(0x3 << 20)
@@ -74,9 +81,14 @@
 	fmov d30, xzr
 	fmov d31, xzr
 
-	/* Init Stack Pointer Registers */
+	/* Init stack pointer registers */
 	adr x1, stack_top
 	mov sp, x1
+	mov x1, xzr
+
+	/* Init system control registers */
+	# ldr x1, =0x30C50838
+	# msr SCTLR_EL1, x1
 
 .endm
 
@@ -89,9 +101,9 @@ core_sleep:
 _start:
 
 	/* Only continue with core 0 */
-	mrs x2, MPIDR_EL1
-	and x2, x2, #0xFF
-	cbnz x2, core_sleep
+	mrs x1, MPIDR_EL1
+	and x1, x1, #0xFF
+	cbnz x1, core_sleep
 
 	init_registers
 
@@ -99,7 +111,6 @@ _start:
 	mrs x1, CurrentEL
 	lsr x1, x1, #2
 	and x1, x1, #0x3
-	add x0, x1, #48
 	cmp x1, #1
 	b.ne high_exception_halt
 
