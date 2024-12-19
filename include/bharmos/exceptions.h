@@ -7,7 +7,7 @@
 #define BHARMOS_EXCEPTIONS_H
 #include <bharmos/registers.h>
 
-static inline u8 get_current_el() {
+static u8 get_current_el() {
   CurrentEL EL;
   READ_SYS_REG(CurrentEL, EL);
   return (EL.EL);

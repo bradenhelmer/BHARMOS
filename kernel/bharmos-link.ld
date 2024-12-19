@@ -12,6 +12,7 @@ SECTIONS {
 	KERNEL_START = .;
 	
 	.boot.text ALIGN(4K) : AT(ADDR(.boot.text)) {
+		KEEP(*(.evt.text))
 		*(.boot.text)
 	}
 

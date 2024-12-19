@@ -134,6 +134,6 @@ typedef struct {
   __asm__ __volatile__("mrs %0, " #REG_TYPE : "=r"(OUTPUT) :);
 
 #define WRITE_SYS_REG(REG_TYPE, INPUT)                                         \
-  __asm__ __volatile__("msr " #REG_TYPE ", %0" ::"r"(INPUT) : #REG_TYPE);
+  __asm__ __volatile__("msr " #REG_TYPE ", %0" ::"r"(INPUT));
 
 #endif // BHARMOS_REGISTERS_H

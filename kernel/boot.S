@@ -48,38 +48,38 @@
 	msr CPACR_EL1, x1
 	isb
 
-	fmov d0, xzr
-	fmov d1, xzr
-	fmov d2, xzr
-	fmov d3, xzr
-	fmov d4, xzr
-	fmov d5, xzr
-	fmov d6, xzr
-	fmov d7, xzr
-	fmov d8, xzr
-	fmov d9, xzr
-	fmov d10, xzr
-	fmov d11, xzr
-	fmov d12, xzr
-	fmov d13, xzr
-	fmov d14, xzr
-	fmov d15, xzr
-	fmov d16, xzr
-	fmov d17, xzr
-	fmov d18, xzr
-	fmov d19, xzr
-	fmov d20, xzr
-	fmov d21, xzr
-	fmov d22, xzr
-	fmov d23, xzr
-	fmov d24, xzr
-	fmov d25, xzr
-	fmov d26, xzr
-	fmov d27, xzr
-	fmov d28, xzr
-	fmov d29, xzr
-	fmov d30, xzr
-	fmov d31, xzr
+	movi v0.16b,  #0
+	movi v1.16b,  #0
+	movi v2.16b,  #0
+	movi v3.16b,  #0
+	movi v4.16b,  #0
+	movi v5.16b,  #0
+	movi v6.16b,  #0
+	movi v7.16b,  #0
+	movi v8.16b,  #0
+	movi v9.16b,  #0
+	movi v10.16b, #0
+	movi v11.16b, #0
+	movi v12.16b, #0
+	movi v13.16b, #0
+	movi v14.16b, #0
+	movi v15.16b, #0
+	movi v16.16b, #0
+	movi v17.16b, #0
+	movi v18.16b, #0
+	movi v19.16b, #0
+	movi v20.16b, #0
+	movi v21.16b, #0
+	movi v22.16b, #0
+	movi v23.16b, #0
+	movi v24.16b, #0
+	movi v25.16b, #0
+	movi v26.16b, #0
+	movi v27.16b, #0
+	movi v28.16b, #0
+	movi v29.16b, #0
+	movi v30.16b, #0
+	movi v31.16b, #0
 
 	/* Init stack pointer registers */
 	adr x1, stack_top
@@ -109,8 +109,7 @@ _start:
 
 	/* Ensure we aren't in any exception level higher than 1 */
 	mrs x1, CurrentEL
-	lsr x1, x1, #2
-	and x1, x1, #0x3
+	ubfx x1, x1, #2, #2
 	cmp x1, #1
 	b.ne high_exception_halt
 
